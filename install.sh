@@ -21,7 +21,7 @@ cd /homelab-toolchain/proxmox-openwrt
 
 wget "$OPENWRT_DOWNLOAD_LINK"
 
-pct create $LXC_ID ./$CONTAINER_FILE --unprivileged 1 --ostype unmanaged --hostname "$HOSTNAME" --storage $STORAGE
+pct create $LXC_ID ./$CONTAINER_FILE --unprivileged 1 --ostype unmanaged --arch amd64 --hostname "$HOSTNAME" --storage $STORAGE
 
 sleep 10
 
@@ -31,6 +31,19 @@ sed -i '/net1:/d' $CONFIG_FILE
 pct set $LXC_ID -net0 name=eth0,bridge=vmbr0,ip=dhcp,type=veth
 pct set $LXC_ID -net1 name=eth1,bridge=vmbr2,type=veth
 
+{
+    echo "onboot: 1"
+    echo "lxc.cgroup2.devices.allow: c 10:200 rwm"
+    echo "lxc.mount.entry: /dev/net dev/net none bind,create=dir"
+} >> $CONFIG_FILE
+
 # Clean Up
 cd "$HOME"
 rm -rf /homelab-toolchain/proxmox-openwrt
+
+# Start container
+pct start $LXC_ID
+
+# Go to container
+pct exec $LXC_ID -- opkg update && opkg install nano curl ca-certificates
+pct exec $LXC_ID -- curl -sSL https://github.com/homelab-toolchain/proxmox-openwrt/raw/refs/heads/main/setup.sh | ash
