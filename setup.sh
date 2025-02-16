@@ -1,23 +1,30 @@
 #!/bin/ash
 
 # --------------------------------
+# Install first packages
+# --------------------------------
+opkg update && opkg install curl ca-certificates
+# --------------------------------
+
+# --------------------------------
 # Enable web access and ssh
 # --------------------------------
-{
-    config rule
-            option src          wan
-            option dest_port    80
-            option proto        tcp
-            option target       ACCEPT
-            option name         'Enable Web Access'
+uci add firewall rule
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].dest_port='80'
+uci set firewall.@rule[-1].proto='tcp'
+uci set firewall.@rule[-1].target='ACCEPT'
+uci set firewall.@rule[-1].name='Enable Web Access'
 
-    config rule
-            list proto          tcp
-            option src          wan
-            option dest_port    22
-            option target       ACCEPT
-            option name         'Enable SSH'
-} >> /etc/config/firewall
+uci add firewall rule
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].dest_port='22'
+uci set firewall.@rule[-1].proto='tcp'
+uci set firewall.@rule[-1].target='ACCEPT'
+uci set firewall.@rule[-1].name='Enable SSH'
+
+uci commit firewall
+/etc/init.d/firewall restart
 # --------------------------------
 
 # --------------------------------
@@ -35,14 +42,14 @@ sed -i 's/ifname/device/g' /etc/config/network
 # --------------------------------
 # Enable LAN interface
 # --------------------------------
-{
-    config interface 'lan'
-            option proto 'static'
-            option device 'eth1'
-            option ipaddr '10.0.0.1'
-            option netmask '255.255.255.0'
-            option delegate '0'
-} >> /etc/config/network
+uci set network.lan=interface
+uci set network.lan.proto='static'
+uci set network.lan.device='eth1'
+uci set network.lan.ipaddr='10.0.0.1'
+uci set network.lan.netmask='255.255.255.0'
+uci set network.lan.delegate='0'
+uci commit network
+/etc/init.d/network restart
 # --------------------------------
 
 # --------------------------------
@@ -50,6 +57,7 @@ sed -i 's/ifname/device/g' /etc/config/network
 # --------------------------------
 uci set 'network.lan.ipv6=0'
 uci set 'network.wan.ipv6=0'
+uci set 'network.loopback.ipv6=0'
 uci set 'dhcp.lan.dhcpv6=disabled'
 /etc/init.d/odhcpd disable
 uci commit
@@ -62,11 +70,8 @@ uci commit network
 /etc/init.d/network restart
 /etc/init.d/odhcpd disable
 /etc/init.d/odhcpd stop
-uci -q delete network.globals.ula_prefix
-uci commit network
-sed -i '/globals/d' /etc/config/network
-/etc/init.d/network restart
-uci -q delete network.wan6
+uci delete network.wan6
+uci delete network.globals
 uci commit network
 /etc/init.d/network restart
 # --------------------------------
@@ -74,5 +79,6 @@ uci commit network
 # --------------------------------
 # Reboot the system
 # --------------------------------
+echo "Rebooting the system..."
 reboot
 # --------------------------------
