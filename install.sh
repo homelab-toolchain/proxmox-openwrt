@@ -45,7 +45,7 @@ rm -rf /homelab-toolchain/proxmox-openwrt
 pct start $LXC_ID
 
 # Go to container
-pct exec $LXC_ID -- opkg update && opkg install curl ca-certificates
+pct exec $LXC_ID -- opkg update && opkg install nano curl ca-certificates
 pct exec $LXC_ID -- curl -sSL https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/setup.sh | ash
 
 # Finish

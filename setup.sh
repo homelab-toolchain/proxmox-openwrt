@@ -3,7 +3,7 @@
 # --------------------------------
 # Install first packages
 # --------------------------------
-opkg update && opkg install curl ca-certificates
+opkg update && opkg install nano curl ca-certificates
 # --------------------------------
 
 # --------------------------------
@@ -31,11 +31,6 @@ uci commit firewall
 # Migrate network: Replace "ifname" with "device"
 # --------------------------------
 sed -i 's/ifname/device/g' /etc/config/network
-# --------------------------------
-
-# --------------------------------
-# Restart network
-# --------------------------------
 /etc/init.d/network restart
 # --------------------------------
 
