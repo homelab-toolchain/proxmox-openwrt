@@ -72,6 +72,12 @@ uci commit network
 # --------------------------------
 
 # --------------------------------
+# Updgrade the system
+# --------------------------------
+opkg update && opkg list-upgradable | cut -f 1 -d ' ' | xargs opkg upgrade
+# --------------------------------
+
+# --------------------------------
 # Reboot the system
 # --------------------------------
 echo "Rebooting the system..."
