@@ -1,6 +1,16 @@
 #!/bin/ash
 
 # --------------------------------
+# Check internet connection
+# --------------------------------
+echo "Checking internet connection..."
+if ! ping -c 1 -W 10 1.1.1.1 > /dev/null 2>&1; then
+    echo "Check the internet connection and try again!"
+    exit 1
+fi
+# --------------------------------
+
+# --------------------------------
 # Install first packages
 # --------------------------------
 opkg update && opkg install nano curl ca-certificates
@@ -72,9 +82,9 @@ uci commit network
 # --------------------------------
 
 # --------------------------------
-# Updgrade the system
+# Upgrade the system.
 # --------------------------------
-opkg update && opkg list-upgradable | cut -f 1 -d ' ' | xargs opkg upgrade
+# opkg update && opkg list-upgradable | cut -f 1 -d ' ' | xargs opkg upgrade
 # --------------------------------
 
 # --------------------------------

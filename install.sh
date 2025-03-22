@@ -44,9 +44,12 @@ rm -rf /homelab-toolchain/proxmox-openwrt
 # Start container
 pct start $LXC_ID
 
-# Go to container
-pct exec $LXC_ID -- opkg update && opkg install nano curl ca-certificates
-pct exec $LXC_ID -- curl -sSL https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/setup.sh | ash
+if pct exec $LXC_ID -- ping -c 1 -W 10 1.1.1.1 > /dev/null 2>&1; then    
+    pct exec $LXC_ID -- sh -c "wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/setup.sh | ash"
+else
+    echo "Check internet connection in container!"
+    exit 1
+fi
 
 # Finish
 echo "Done."
