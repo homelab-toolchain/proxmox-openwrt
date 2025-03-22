@@ -43,6 +43,7 @@ rm -rf /homelab-toolchain/proxmox-openwrt
 
 # Start container
 pct start $LXC_ID
+sleep 10s
 
 if pct exec $LXC_ID -- ping -c 1 -W 10 1.1.1.1 > /dev/null 2>&1; then    
     pct exec $LXC_ID -- sh -c "wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/setup.sh | ash"
