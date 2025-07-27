@@ -33,16 +33,9 @@ Automatically reboots the router after successfully applying all configurations.
 2. Log in as root.
 3. The network bridge `vmbr0` to be used as `wan` interface.
 4. The network bridge `vmbr1` to be used as `lan` interface.
-5. Install `curl` or just call the following command:
-```
-apt-get update -y && apt-get install curl -y
-```
 
 # How to Execute
 
-Call the following command on your Proxmox:
-
 ```
-curl -sSL https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/create.sh | bash -s lanInterface=vmbr10000
 ```
-
