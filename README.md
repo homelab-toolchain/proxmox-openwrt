@@ -1,49 +1,96 @@
-# General
+<h1 align="center">Proxmox OpenWrt</h1>
+<h3 align="center">Automated OpenWrt LXC deployment for Proxmox VE</h3>
+<p align="center">
+<a href="#">
+<img src="https://img.shields.io/github/last-commit/homelab-toolchain/proxmox-openwrt/main?style=for-the-badge&label=last%20update&display_timestamp=committer"/>
+</a>
+</p>
 
-> [!NOTE]  
-> At the moment the script installs Openwrt 24.10. The possibility to provide input parameters comes in the next days/weeks. 
+---
 
-The Proxmox-Openwrt automates installation of OpenWrt on Proxmox and several OpenWRT configuration steps. Below is a detailed description of the actions performed by the script:
+## Overview
 
-**1. Enabling Web and SSH Access** <br>
-Opens port `80` (HTTP) and port `22` (SSH) for WAN access.
-Updates the OpenWRT firewall configuration to allow web and SSH connections.
+This project contains two companion scripts that provision a ready-to-use OpenWrt appliance on a Proxmox VE host:
 
-**2. Migrating Network Configuration** <br>
-Replaces all occurrences of `ifname` with `device` in the /etc/config/network file to support the new OpenWRT naming convention.
+- `create.sh` creates an OpenWrt LXC container, downloads the requested release directly from [images.linuxcontainers.org](https://images.linuxcontainers.org/), attaches the WAN/LAN bridges, and injects the LXC configuration required for networking.
+- `setup.sh` is executed inside the container to install base packages, open management access from the WAN side, harden IPv4, disable IPv6, and reboot the router once all changes are applied.
 
-**3. Configuring the LAN Interface** <br>
-Sets up a static `lan` interface with:
-* Device: `eth1`
-* IP Address: `10.0.0.1`
-* Subnet Mask: `255.255.255.0`
-* Disables IPv6 delegation for the LAN.
+Run the scripts directly from GitHub and you will have a clean OpenWrt instance a few moments later—no web clicks or manual configuration required.
 
-**4. Disabling IPv6** <br>
-Sets various UCI options to disable IPv6 for `lan` and `wan`.<br>
-Deletes the ula_prefix option and removes the globals block from the network configuration.<br>
-Disables and stops the odhcpd service, responsible for IPv6.<br>
+## Features
 
-**5. Rebooting the System** <br>
-Automatically reboots the router after successfully applying all configurations.
+- Targets any published OpenWrt release (defaults to `24.10`) and automatically pulls the newest build for that release.
+- Creates a Proxmox LXC with predictable naming, storage placement, and ID ranges that can be overridden via parameters.
+- Configures dual veth interfaces so you can map independent WAN/LAN bridges such as `vmbr0` and `vmbr1`.
+- Opens HTTP/SSH management ports on the WAN zone and copies firewall rules that let your upstream network reach devices on the LAN.
+- Migrates the OpenWrt network config to the modern `device` syntax, pins the LAN interface to `eth1`, and sets 10.0.0.0/24 as the default LAN.
+- Disables IPv6 support (including odhcpd) to keep deployments predictable in dual-stack environments.
 
-# Prerequsites
+## Requirements
 
-1. Internet connection.
-2. Log in as root.
-3. The network bridge `vmbr0` to be used as `wan` interface.
-4. The network bridge `vmbr1` to be used as `lan` interface.
+1. Proxmox VE host with shell access as `root` and the `pct` command available.
+2. Internet access from the Proxmox host (scripts download container images and packages).
+3. At least two configured Linux bridges (e.g., `vmbr0` for WAN and `vmbr1` for LAN).
+4. Available storage on the chosen Proxmox datastore (default `local-lvm`).
+5. Optional but recommended: create dedicated LXC ID ranges so they do not collide with existing guests.
 
-# How to Execute
+## Quick Start
 
-```
-wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/create.sh | bash -s lanInterface=vmbr10000
-```
-
-or with all optional parameters:
-
-```
-wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/create.sh | bash -s openWrtVersion=24.10 lxcId=1000 hostname=openwrt-24.10 storage=local-lvm wanInterface=vmbr0 lanInterface=vmbr1
+```bash
+wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/create.sh \
+| bash -s lanInterface=vmbr10000
 ```
 
-**Note**: Do not forget to define an admin password at the end!
+### Full Example with Custom Parameters
+
+```bash
+wget -qO- https://raw.githubusercontent.com/homelab-toolchain/proxmox-openwrt/refs/heads/main/create.sh \
+| bash -s openWrtVersion=24.10 \
+        lxcId=1000 \
+        hostname=openwrt-24.10 \
+        storage=local-lvm \
+        wanInterface=vmbr0 \
+        lanInterface=vmbr1
+```
+
+### Argument Reference
+
+| Parameter       | Default              | Required | Description |
+|-----------------|----------------------|----------|-------------|
+| `openWrtVersion`| `24.10`              | No       | OpenWrt release to download from linuxcontainers.org. |
+| `lxcId`         | `10000`              | No       | Proxmox LXC numeric ID. Must be unique on the host. |
+| `hostname`      | `openwrt-<version>`  | No       | Hostname assigned to the new container. |
+| `storage`       | `local-lvm`          | No       | Proxmox storage backend used for the container root disk. |
+| `wanInterface`  | `vmbr0`              | No       | Bridge mapped to `eth0` inside the container (WAN). |
+| `lanInterface`  | _(none)_             | Yes      | Bridge mapped to `eth1` inside the container (LAN). |
+
+All parameters can be chained after `bash -s` as `key=value` pairs in any order.
+
+## What the Scripts Configure
+
+Once the container is running, `setup.sh` completes the following tasks automatically:
+
+1. **Connectivity check** – Ensures the container can reach the internet before proceeding.
+2. **Base packages** – Installs `nano`, `curl`, and `ca-certificates` so the image is ready for troubleshooting and HTTPS requests.
+3. **Firewall rules** – Adds explicit WAN rules for HTTP (80) and SSH (22) and a rule that allows traffic from the upstream (WAN) network back into the LAN zone.
+4. **Network migration** – Replaces legacy `ifname` syntax with `device` entries in `/etc/config/network`.
+5. **LAN definition** – Configures `eth1` as a static LAN interface on `10.0.0.1/24` with IPv6 delegation disabled.
+6. **IPv6 shutdown** – Disables IPv6 on `lan`, `wan`, and `loopback`, removes `network.globals`, stops and disables `odhcpd`, and deletes the default `wan6` interface.
+7. **Final reboot** – Reboots the container so all kernel/network changes are active.
+
+These opinionated defaults keep the deployment deterministic. Adjust the scripts if you require IPv6, alternate addressing, or different firewall behavior.
+
+## Post-Install Checklist
+
+- **Set an admin password**: OpenWrt ships without one. Log in via SSH or LuCI on `10.0.0.1` and create a secure password immediately.
+- **Double-check bridge wiring**: Confirm that `vmbr0` (WAN) and `vmbr1` (LAN) connect to the networks you expect in Proxmox.
+- **Optional updates**: Uncomment the upgrade block in `setup.sh` if you want the script to update all packages automatically after provisioning.
+
+## Troubleshooting Tips
+
+- Container cannot reach the internet: verify the WAN bridge has upstream connectivity and that the Proxmox host can resolve DNS.
+- No access to `10.0.0.1`: ensure your LAN bridge is attached to the correct physical or virtual network and that your workstation is on the same segment.
+
+---
+
+**Reminder:** Always finish by defining an admin password. Without it, OpenWrt will continue to allow passwordless root access over SSH and LuCI.
