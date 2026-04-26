@@ -28,16 +28,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          rm -rf images
           mkdir -p images
 
           # Versions and architectures
-          VERSIONS=("23.05" "24.10")
+          VERSIONS=("24.10" "25.12")
           ARCHS=("amd64" "arm64")
 
           for VERSION in "${VERSIONS[@]}"; do
             echo ">>> Processing OpenWrt version: $VERSION"
             VERSION_DIR="images/$VERSION"
+            rm -rf "$VERSION_DIR"
             mkdir -p "$VERSION_DIR"
 
             for ARCH in "${ARCHS[@]}"; do
