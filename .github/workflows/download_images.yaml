@@ -31,7 +31,7 @@ jobs:
           mkdir -p images
 
           # Versions and architectures
-          VERSIONS=("24.10" "25.12")
+          VERSIONS=("25.12") # e.g.: ("24.10" "25.12")
           ARCHS=("amd64" "arm64")
 
           for VERSION in "${VERSIONS[@]}"; do
