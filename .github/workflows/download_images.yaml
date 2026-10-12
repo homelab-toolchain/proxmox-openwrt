@@ -30,8 +30,19 @@ jobs:
 
           mkdir -p images
 
-          # Versions and architectures
-          VERSIONS=("25.12") # e.g.: ("24.10" "25.12")
+          # Dynamically detect available versions (excluding "snapshot") and architectures
+          VERSIONS=($(curl -sSL "https://images.linuxcontainers.org/images/openwrt/" \
+            | grep -oP '(?<=href=")[^"/]+(?=/")' \
+            | grep -vE '^(\.\.|snapshot)$' \
+            | sort -V))
+
+          if [[ ${#VERSIONS[@]} -eq 0 ]]; then
+            echo "!!! ERROR: No OpenWrt versions found"
+            exit 1
+          fi
+
+          echo ">>> Detected versions: ${VERSIONS[*]}"
+
           ARCHS=("amd64" "arm64")
 
           for VERSION in "${VERSIONS[@]}"; do
